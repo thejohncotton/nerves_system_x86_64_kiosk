@@ -50,3 +50,16 @@ ln -sf ops.fw $TARGET_DIR/usr/share/fwup/revert.fw
 
 # Copy the fwup includes to the images dir
 cp -rf $NERVES_DEFCONFIG_DIR/fwup_include $BINARIES_DIR
+
+# Mesa 25 installs the DRI megadriver as /usr/lib/libgallium-<ver>.so but omits the
+# /usr/lib/dri/*_dri.so symlinks that the EGL/GBM loader dlopens. Without them EGL
+# init fails ("failed to create dri2 screen") and there's no hardware (or software)
+# GL — so Cog/WPE can't render. Create the loader symlinks. (Verified on the F9B:
+# with iris_dri.so present, Cog initializes EGL and renders.)
+GALLIUM=$(cd $TARGET_DIR/usr/lib 2>/dev/null && ls libgallium-*.so 2>/dev/null | head -n1)
+if [ -n "$GALLIUM" ]; then
+    mkdir -p $TARGET_DIR/usr/lib/dri
+    for drv in iris swrast kms_swrast; do
+        ln -sf ../$GALLIUM $TARGET_DIR/usr/lib/dri/${drv}_dri.so
+    done
+fi

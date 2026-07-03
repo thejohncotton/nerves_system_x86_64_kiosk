@@ -1,0 +1,149 @@
+BR2_x86_64=y
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/nerves-project/toolchains/releases/download/v13.2.0/nerves_toolchain_x86_64_nerves_linux_musl-linux_${shell uname -m}-13.2.0-8123CAA.tar.xz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="$(ARCH)-nerves-linux-musl"
+BR2_TOOLCHAIN_EXTERNAL_GCC_13=y
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_5_4=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+BR2_TOOLCHAIN_EXTERNAL_FORTRAN=y
+BR2_TOOLCHAIN_EXTERNAL_OPENMP=y
+BR2_TAR_OPTIONS="--no-same-owner"
+BR2_BACKUP_SITE="https://dl.nerves-project.org"
+# BR2_ENABLE_DEBUG is not set (disabled: WebKit link needs 20-30GB+ with -g and OOM'd)
+BR2_GLOBAL_PATCH_DIR="${BR2_EXTERNAL_NERVES_PATH}/patches"
+BR2_REPRODUCIBLE=y
+BR2_ROOTFS_SKELETON_CUSTOM=y
+BR2_ROOTFS_SKELETON_CUSTOM_PATH="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/skeleton"
+BR2_INIT_NONE=y
+BR2_ENABLE_LOCALE_WHITELIST="locale-archive"
+BR2_ROOTFS_OVERLAY="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/rootfs_overlay ${NERVES_DEFCONFIG_DIR}/rootfs_overlay"
+BR2_ROOTFS_POST_BUILD_SCRIPT="${NERVES_DEFCONFIG_DIR}/post-build.sh ${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/post-build.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="${NERVES_DEFCONFIG_DIR}/post-createfs.sh"
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6.12.54"
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="${NERVES_DEFCONFIG_DIR}/linux-6.12.defconfig"
+BR2_LINUX_KERNEL_XZ=y
+BR2_LINUX_KERNEL_INSTALL_TARGET=y
+BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
+BR2_PACKAGE_BUSYBOX_CONFIG="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/busybox.config"
+BR2_PACKAGE_E2FSPROGS=y
+# BR2_PACKAGE_E2FSPROGS_FSCK is not set
+BR2_PACKAGE_CA_CERTIFICATES=y
+BR2_PACKAGE_LIBP11=y
+BR2_PACKAGE_UNIXODBC=y
+BR2_PACKAGE_LIBMNL=y
+BR2_PACKAGE_LIBNL=y
+# BR2_TARGET_ROOTFS_TAR is not set
+BR2_TARGET_GRUB2=y
+# Build both BIOS (i386-pc) and UEFI (x86_64-efi) GRUB -> hybrid image that boots
+# legacy BIOS/QEMU *and* UEFI-only hardware (F9B Pro N95 is UEFI-only, no CSM).
+BR2_TARGET_GRUB2_I386_PC=y
+BR2_TARGET_GRUB2_X86_64_EFI=y
+BR2_TARGET_GRUB2_BUILTIN_MODULES_PC="boot linux ext2 squash4 fat part_msdos normal biosdisk loadenv echo true test sleep regexp"
+BR2_TARGET_GRUB2_BUILTIN_MODULES_EFI="boot linux ext2 squash4 fat part_msdos normal loadenv echo true test sleep regexp search search_fs_file configfile efi_gop all_video"
+BR2_TARGET_GRUB2_INSTALL_TOOLS=y
+BR2_PACKAGE_HOST_DOSFSTOOLS=y
+BR2_NERVES_SYSTEM_NAME="nerves_system_x86_64_kiosk"
+BR2_NERVES_ADDITIONAL_IMAGE_FILES="${NERVES_DEFCONFIG_DIR}/fwup.conf"
+BR2_PACKAGE_NBTTY=y
+BR2_PACKAGE_NERVES_CONFIG=y
+BR2_PACKAGE_NERVES_CONFIG_ACCEPT_RNG_NOTICE=y
+
+# ============================================================================
+# Higole F9B Pro kiosk additions (fork). See README-kiosk.md.
+# ============================================================================
+
+# --- eudev: REQUIRED. weston, libinput, and cog's DRM platform all
+#     `depend on BR2_PACKAGE_HAS_UDEV`. The base Nerves system creates /dev
+#     statically, so without eudev those packages are silently dropped. This
+#     switches to dynamic device creation (same as the kiosk_system_rpi5 system).
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+
+# --- GPU firmware (i915 needs DMC/GuC blobs for Alder Lake-N or the GPU wedges;
+#     rtw88 for WiFi; rtl_8169 covers the RTL8125 NIC firmware). NOTE: the correct
+#     Buildroot option is _I915 (not _INTEL_I915) and _RTL_RTW88 (not _RTL_8821C) —
+#     the old names silently dropped, leaving the GPU firmware-less and wedged. -
+BR2_PACKAGE_LINUX_FIRMWARE=y
+BR2_PACKAGE_LINUX_FIRMWARE_I915=y
+BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW88=y
+BR2_PACKAGE_LINUX_FIRMWARE_RTL_8169=y
+
+# --- GPU userland: Mesa "iris" (Intel Gen12 / Alder Lake-N) with GLES/EGL/GBM.
+#     wpewebkit/cog need HAS_LIBGLES + HAS_LIBEGL; cog-drm needs GBM w/ dma-buf.
+#     The iris gallium driver `depends on BR2_PACKAGE_MESA3D_LLVM` — without LLVM,
+#     iris drops, no gallium driver is selected, and OPENGL_EGL/ES/GBM (hence
+#     wpewebkit) are silently omitted. (rpi5's V3D driver doesn't need LLVM; Intel
+#     iris does — this is a real, longer build: host+target LLVM.)
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_LLVM=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_IRIS=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+BR2_PACKAGE_MESA3D_GBM=y
+
+# --- Wayland kiosk: Weston compositor + Cog (WPE WebKit) browser --------------
+# Mirrors the proven kiosk_system_rpi5 stack (verified present in Buildroot
+# 2025.11.3). Hard deps (wayland, libinput, wpebackend-fdo, libdrm, dejavu,
+# seatd) are auto-selected. Cog opens HOME_URI full-screen at boot; point it at
+# the kiosk app (default: a local server on :4000, same convention as rpi5).
+BR2_PACKAGE_WESTON=y
+BR2_PACKAGE_WPEWEBKIT=y
+BR2_PACKAGE_WPEWEBKIT_MULTIMEDIA=y
+BR2_PACKAGE_COG=y
+BR2_PACKAGE_COG_PROGRAMS_HOME_URI="http://localhost:4000/"
+BR2_PACKAGE_GST1_PLUGINS_BASE_LIB_OPENGL=y
+
+# ============================================================================
+# VHSynth kiosk-app stack (ported from kiosk_system_rpi5 `mpv-test`). The Rust
+# app (vhsynth_app) needs: mpv (video engine), x264 + a specific GStreamer plugin
+# set (WebRTC/RTP/H.264 streaming), ffmpeg-with-x264 (transcode), ALSA utils
+# (MIDI + audio), and fonts for the Cog web UI. SQLite is bundled into the Rust
+# binary (rusqlite). Skipped vs rpi5: V3D/mesa + rpi-firmware + DTC (hardware),
+# fluid-soundfont (~140MB, unused), alsabat (pulls fftw), kmssrc (needs gst>=1.26).
+# ============================================================================
+
+# Audio + MIDI (Rust cpal/midir use libasound directly; utils for diagnostics)
+BR2_PACKAGE_ALSA_UTILS=y
+BR2_PACKAGE_ALSA_UTILS_ACONNECT=y
+BR2_PACKAGE_ALSA_UTILS_AMIDI=y
+BR2_PACKAGE_ALSA_UTILS_AMIXER=y
+BR2_PACKAGE_ALSA_UTILS_APLAY=y
+BR2_PACKAGE_ALSA_UTILS_APLAYMIDI=y
+BR2_PACKAGE_ALSA_UTILS_ARECORDMIDI=y
+BR2_PACKAGE_ALSA_UTILS_ASEQDUMP=y
+BR2_PACKAGE_ALSA_UTILS_ASEQNET=y
+BR2_PACKAGE_ALSA_UTILS_SPEAKER_TEST=y
+
+# Video engine
+BR2_PACKAGE_MPV=y
+
+# H.264 encode: x264 lib + ffmpeg GPL/x264 + gst "ugly" x264 plugin
+BR2_PACKAGE_X264=y
+BR2_PACKAGE_FFMPEG=y
+BR2_PACKAGE_FFMPEG_GPL=y
+BR2_PACKAGE_GST1_PLUGINS_UGLY=y
+BR2_PACKAGE_GST1_PLUGINS_UGLY_PLUGIN_X264=y
+
+# GStreamer streaming/WebRTC: RTP payload/manager + webrtcbin (auto-selects
+# libnice + dtls plugin + openssl) + SRTP + videotestsrc. matroskamux and
+# gst1-libav (avdec/avenc_aac) are already present in the base image.
+BR2_PACKAGE_GST1_PLUGINS_GOOD=y
+BR2_PACKAGE_GST1_PLUGINS_GOOD_PLUGIN_RTP=y
+BR2_PACKAGE_GST1_PLUGINS_GOOD_PLUGIN_RTPMANAGER=y
+BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_WEBRTC=y
+BR2_PACKAGE_LIBSRTP2=y
+BR2_PACKAGE_GST1_PLUGINS_BASE_PLUGIN_VIDEOTESTSRC=y
+
+# Fonts for the Cog kiosk UI (Liberation TTF; woff2 fails in Cog per VHSynth docs)
+BR2_PACKAGE_LIBERATION=y
+
+# Debug convenience: poke the mpv IPC socket over SSH
+BR2_PACKAGE_SOCAT=y
+
+# Cap parallel jobs to avoid OOM; safe at j12 with VM off + -g0 (debug info stripped in toolchainfile)
+BR2_JLEVEL=12

@@ -1,0 +1,16 @@
+--- a/libweston/output-capture.c
++++ b/libweston/output-capture.c
+@@ -364,7 +364,12 @@
+ 
+ 	wl_signal_emit(&compositor->output_capture.ask_auth, &att);
+ 
+-	return att.authorized && !att.denied;
++	/* Kiosk: default-allow output capture. Stock Weston only authorizes
++	 * clients the shell itself spawned (screenshot keybinding), which makes
++	 * weston-screenshooter unusable from the supervisor. This device's UI
++	 * and A/V stream are already LAN-open, so capture is not an escalation.
++	 * Explicit denials (att.denied) are still honored. */
++	return !att.denied;
+ }
+ 
+ /** Fetch the next capture task

@@ -56,6 +56,15 @@ CONFIG_SND=y
 CONFIG_SND_DYNAMIC_MINORS=y
 CONFIG_SND_SEQUENCER=y
 CONFIG_SND_SOC=y
+# --- Internal audio: Alder Lake-N HD Audio (legacy HDA mode — no SOF DSP
+#     firmware in this image; snd_intel_dspcfg.dsp_driver=1 on the kernel
+#     cmdline forces the legacy driver even if dsp_config would prefer SOF).
+#     Realtek codec for the 3.5mm jack, HDMI codec for display audio.
+CONFIG_SND_PCI=y
+CONFIG_SND_HDA_INTEL=y
+CONFIG_SND_HDA_GENERIC=y
+CONFIG_SND_HDA_CODEC_REALTEK=y
+CONFIG_SND_HDA_CODEC_HDMI=y
 CONFIG_HIDRAW=y
 CONFIG_HID_MULTITOUCH=y
 CONFIG_USB=y
@@ -156,12 +165,15 @@ CONFIG_R8169=y
 #     USB_STORAGE in the base config; AHCI is for flashing to the internal SSD.
 CONFIG_SATA_AHCI=y
 
-# --- WiFi: Realtek RTL8821CE [10ec:c821] (rtw88). Optional for a kiosk; needs
-#     rtw88 firmware (BR2_PACKAGE_LINUX_FIRMWARE_RTL_8821C in nerves_defconfig).
+# --- WiFi: Realtek RTL8821CE [10ec:c821] (rtw88). Firmware comes from
+#     BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW88. The driver MUST be a module: built-in
+#     it probes before the rootfs is mounted, the firmware load fails with -ENOENT,
+#     and the device stays dead until a manual PCI rebind. As modules, eudev loads
+#     it after boot and the firmware is right there.
 CONFIG_WLAN=y
-CONFIG_CFG80211=y
-CONFIG_MAC80211=y
-CONFIG_RTW88=y
-CONFIG_RTW88_CORE=y
-CONFIG_RTW88_PCI=y
-CONFIG_RTW88_8821CE=y
+CONFIG_CFG80211=m
+CONFIG_MAC80211=m
+CONFIG_RTW88=m
+CONFIG_RTW88_CORE=m
+CONFIG_RTW88_PCI=m
+CONFIG_RTW88_8821CE=m

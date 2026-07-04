@@ -117,6 +117,35 @@ CONFIG_I2C_DESIGNWARE_PLATFORM=y
 CONFIG_INPUT_TOUCHSCREEN=y
 CONFIG_TOUCHSCREEN_GOODIX=y
 
+# The F9B's touch controller enumerates in ACPI as GDIX1002 — a HID-over-I2C device,
+# NOT the native goodix protocol, so TOUCHSCREEN_GOODIX doesn't bind it. HID-over-I2C
+# on x86/ACPI needs I2C_HID_ACPI (pulls I2C_HID_CORE); the touch reports are then
+# handled by HID_MULTITOUCH (already enabled) to create a multitouch input device.
+CONFIG_I2C_HID=y
+CONFIG_I2C_HID_ACPI=y
+CONFIG_I2C_HID_CORE=y
+
+# The touch controller's interrupt is a GpioInt on the SoC GPIO. Without the Intel
+# pinctrl/GPIO driver there is NO gpiochip, so the IRQ can't be resolved and the ACPI
+# i2c client for GDIX1002 is deferred forever (never created -> no touch). The F9B's
+# GPIO controllers enumerate as INTC1055/56/57 (Alder Lake-N). Enable Intel pinctrl +
+# the Alder Lake (and Tiger Lake, which some ADL-N reuse) drivers. GDIX1002 then binds
+# via the native TOUCHSCREEN_GOODIX driver.
+CONFIG_PINCTRL=y
+CONFIG_PINCTRL_INTEL=y
+CONFIG_PINCTRL_ALDERLAKE=y
+CONFIG_PINCTRL_TIGERLAKE=y
+
+# The touch's I2C controller is an Intel LPSS I2C in PCI mode (00:15.x, device
+# 0x54e8/e9/eb) with NO driver — the base config lacks the intel-lpss MFD driver.
+# intel-lpss-pci binds those PCI devices and instantiates the DesignWare I2C platform
+# device that I2C_DESIGNWARE_PLATFORM drives, creating the i2c bus the touch lives on.
+# Without this there's no LPSS i2c bus at all (only i915 GMBUS) -> GDIX1002 has no bus.
+CONFIG_MFD_CORE=y
+CONFIG_MFD_INTEL_LPSS=y
+CONFIG_MFD_INTEL_LPSS_PCI=y
+CONFIG_MFD_INTEL_LPSS_ACPI=y
+
 # --- Ethernet: 2x Realtek RTL8125 2.5GbE [10ec:8125] (r8169 in 6.x) ---------
 CONFIG_MDIO_DEVICE=y
 CONFIG_PHYLIB=y

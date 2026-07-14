@@ -114,10 +114,16 @@ CONFIG_CRYPTO_DEV_VIRTIO=y
 # (added via BR2_PACKAGE_LINUX_FIRMWARE_INTEL_I915 in nerves_defconfig).
 CONFIG_DRM_I915=y
 CONFIG_DRM_FBDEV_EMULATION=y
-CONFIG_FRAMEBUFFER_CONSOLE=y
+# --- No text console on the kiosk displays, ever. fbcon painted the IEx header
+#     into the sysfb/simpledrm boot framebuffer (erlinit's ctty must stay tty1 —
+#     no usable serial, see config/x86_64.exs), i915 then evicted the fbdev but
+#     the pixels persisted, and every DRM-master handoff (Live enter/exit)
+#     scanned them out as a "terminal flash". Console lives on ttyS0 + RingLogger.
+# CONFIG_FRAMEBUFFER_CONSOLE is not set
+# CONFIG_SYSFB_SIMPLEFB is not set
+# CONFIG_DRM_SIMPLEDRM is not set
 # Console-level rotation (only affects the text console; the Wayland compositor
 # handles the real kiosk rotation via an output transform — see grub.cfg).
-CONFIG_FRAMEBUFFER_CONSOLE_ROTATION=y
 
 # --- Touch: Goodix GDIX1002 over Intel LPSS (DesignWare) I2C ----------------
 # GPIOLIB and COMMON_CLK are required deps the minimal base config omits:

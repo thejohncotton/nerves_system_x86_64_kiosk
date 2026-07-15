@@ -161,5 +161,6 @@ BR2_PACKAGE_LIBERATION=y
 # Debug convenience: poke the mpv IPC socket over SSH
 BR2_PACKAGE_SOCAT=y
 
-# Cap parallel jobs to avoid OOM; safe at j12 with VM off + -g0 (debug info stripped in toolchainfile)
-BR2_JLEVEL=12
+# Cap parallel jobs to avoid OOM. WebCore's unified sources peak at ~2-3 GB per cc1plus,
+# so j12 exceeds a 24 GB build VM and the kernel kills the compiler mid-link.
+BR2_JLEVEL=6

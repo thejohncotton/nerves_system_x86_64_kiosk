@@ -189,3 +189,23 @@ CONFIG_RTW88=m
 CONFIG_RTW88_CORE=m
 CONFIG_RTW88_PCI=m
 CONFIG_RTW88_8821CE=m
+
+# --- Bluetooth: the RTL8821CE combo's BT half is an internal USB HCI device
+#     [0bda:c821] (confirmed on-device: USB class E0/01/01, "Realtek Bluetooth
+#     Radio"). Driver btusb + btrtl; firmware rtl_bt/rtl8821c_{fw,config}.bin comes
+#     from BR2_PACKAGE_LINUX_FIRMWARE_RTL_88XX_BT (nerves_defconfig). BLE (CONFIG_BT_LE)
+#     and AF_BLUETOOTH HCI sockets ship inside bluetooth.ko. Built as MODULES for the
+#     same reason as rtw88 above: built-in, btusb probes on USB enumeration before the
+#     rootfs is mounted and request_firmware() fails -ENOENT; as modules eudev loads it
+#     after boot (modalias icE0) with the firmware already in place. BT_HCIBTUSB_RTL
+#     auto-selects BT_RTL (btrtl.ko). This is USB — no HCIUART/serdev/DT/GRUB plumbing.
+CONFIG_RFKILL=y
+CONFIG_BT=m
+CONFIG_BT_BREDR=y
+CONFIG_BT_LE=y
+CONFIG_BT_RFCOMM=m
+CONFIG_BT_RFCOMM_TTY=y
+CONFIG_BT_HIDP=m
+CONFIG_BT_HCIBTUSB=m
+CONFIG_BT_HCIBTUSB_RTL=y
+CONFIG_BT_HCIBTUSB_AUTOSUSPEND=y

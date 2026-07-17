@@ -73,6 +73,13 @@ BR2_PACKAGE_LINUX_FIRMWARE=y
 BR2_PACKAGE_LINUX_FIRMWARE_I915=y
 BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW88=y
 BR2_PACKAGE_LINUX_FIRMWARE_RTL_8169=y
+# --- Bluetooth firmware for the RTL8821CE BT radio (USB 0bda:c821, btusb+btrtl —
+#     see the BT block in linux-6.12.defconfig). The rtl8821c blobs live in
+#     linux-firmware's rtl_bt/ dir; the RTL_88XX_BT option's rtl_bt/rtl88*.bin glob
+#     covers BOTH rtl8821c_fw.bin and rtl8821c_config.bin (btrtl needs both). Note
+#     RTL_87XX_BT is only 8723/8761 and does NOT cover this chip. (BLUETOOTH_PLAN.md
+#     Phase 4.)
+BR2_PACKAGE_LINUX_FIRMWARE_RTL_88XX_BT=y
 
 # --- WiFi userspace: VintageNetWiFi drives wpa_supplicant over its control
 #     socket — without the package, wlp1s0 comes up but can never join or host
@@ -88,6 +95,18 @@ BR2_PACKAGE_WPA_SUPPLICANT_DEBUG_SYSLOG=y
 BR2_PACKAGE_WPA_SUPPLICANT_WPS=y
 BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 BR2_PACKAGE_WPA_SUPPLICANT_CTRL_IFACE=y
+
+# --- Bluetooth userspace (BLUETOOTH_PLAN.md Phase 5). bluetoothd + bluetoothctl/btmgmt,
+#     driven from Rust via `bluer` over D-Bus. bluez5_utils `select`s dbus, which also puts
+#     libdbus-1 in the sysroot — REQUIRED for the app's `bluer` dependency to cross-compile
+#     (its `dbus` crate finds libdbus-1 via pkg-config). Unlike the RPi5, the F9B image has no
+#     other D-Bus consumer, so DBUS is a genuinely new package here. EXPERIMENTAL enables the
+#     full BLE/GATT D-Bus API. State lives under /var/lib/bluetooth.
+BR2_PACKAGE_DBUS=y
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_EXPERIMENTAL=y
+BR2_PACKAGE_BLUEZ5_UTILS_TOOLS=y
 
 # --- GPU userland: Mesa "iris" (Intel Gen12 / Alder Lake-N) with GLES/EGL/GBM.
 #     wpewebkit/cog need HAS_LIBGLES + HAS_LIBEGL; cog-drm needs GBM w/ dma-buf.

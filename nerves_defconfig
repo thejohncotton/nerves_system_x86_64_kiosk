@@ -79,6 +79,12 @@ BR2_PACKAGE_LINUX_FIRMWARE_RTL_8169=y
 #     covers BOTH rtl8821c_fw.bin and rtl8821c_config.bin (btrtl needs both). Note
 #     RTL_87XX_BT is only 8723/8761 and does NOT cover this chip. (BLUETOOTH_PLAN.md
 #     Phase 4.)
+#     NOTE: verified on-device that Buildroot does NOT reinstall linux-firmware on an
+#     *incremental* rebuild when only this sub-option is added (the target /lib/firmware/
+#     rtl_bt/ stayed empty and btrtl's request_firmware failed -ENOENT). This option is
+#     still correct for a *clean* build; as belt-and-suspenders the two blobs are also
+#     shipped via rootfs_overlay/lib/firmware/rtl_bt/ so the image always has them. To make
+#     this option deliver on an incremental build, force `make linux-firmware-dirclean`.
 BR2_PACKAGE_LINUX_FIRMWARE_RTL_88XX_BT=y
 
 # --- WiFi userspace: VintageNetWiFi drives wpa_supplicant over its control

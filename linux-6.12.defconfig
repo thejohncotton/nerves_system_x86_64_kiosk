@@ -77,6 +77,17 @@ CONFIG_USB=y
 CONFIG_USB_XHCI_HCD=y
 CONFIG_USB_EHCI_HCD=y
 CONFIG_USB_STORAGE=y
+# --- USB serial (DMX / console / adapter cables): modules, matching the RPi5 system.
+#     Without these the F9B enumerated an Enttec DMX USB PRO Mk2 (0403:6001) on the bus
+#     but bound no driver, so no /dev/ttyUSB0 appeared and dmxsynth could never open the
+#     port — the widget sat flashing white (no valid frame received) instead of
+#     white+green. ftdi_sio is the one DMX needs; the rest are the same set the Pi
+#     carries, and cost nothing until such a device is plugged in.
+CONFIG_USB_SERIAL=m
+CONFIG_USB_SERIAL_CH341=m
+CONFIG_USB_SERIAL_CP210X=m
+CONFIG_USB_SERIAL_FTDI_SIO=m
+CONFIG_USB_SERIAL_PL2303=m
 CONFIG_VIRTIO_PCI=y
 CONFIG_VIRTIO_BALLOON=y
 CONFIG_VIRTIO_INPUT=y

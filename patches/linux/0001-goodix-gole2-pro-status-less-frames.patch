@@ -1,0 +1,96 @@
+Subject: [PATCH] goodix: GOLE 2 Pro GT911 — report from the contact record when the status byte is empty
+
+This GT911 firmware (1062, ACPI GDIX1001) never sets the buffer-ready bit or a
+contact count for touch frames (status 0x00, live record behind it) but reports
+finger-up normally (0x80, zero contacts) and then raises one spurious interrupt
+with the stale record. Report a status-less non-zero record as one finger down,
+except when it is that stale repeat right after a release.
+
+--- a/drivers/input/touchscreen/goodix.c
++++ b/drivers/input/touchscreen/goodix.c
+@@ -247,6 +247,24 @@
+ 
+ 	return &gt9x_chip_data;
+ }
++
++/*
++ * Higole GOLE 2 Pro (GT911 fw 1062, ACPI GDIX1001): this firmware never sets the
++ * buffer-ready bit or a contact count in the 0x814E status byte for touch frames
++ * (status reads 0x00 while the contact record behind it is live), but it does
++ * report finger-up through the normal path (status 0x80, zero contacts). After
++ * that release it raises one more interrupt whose record still holds the last
++ * contact — reported naively that is a phantom finger that never lifts, so taps
++ * only register every other time. Remember the last record and whether the last
++ * frame was a release so that stale repeat can be ignored.
++ */
++static u8 goodix_last_rec[GOODIX_CONTACT_SIZE];
++static bool goodix_after_release = true;
++static unsigned long goodix_release_jiffies;
++/* Compare id + x + y only: the stale frame's size byte differs from the last
++ * reported one. The phantom arrives ~50 ms after the release; allow 200. */
++#define GOODIX_STALE_CMP_LEN		5
++#define GOODIX_STALE_WINDOW_MS		200
+ 
+ static int goodix_ts_read_input_report(struct goodix_ts_data *ts, u8 *data)
+ {
+@@ -289,6 +307,18 @@
+ 					return error;
+ 			}
+ 
++			goodix_after_release = (touch_num == 0);
++			if (!touch_num) {
++				/*
++				 * The spurious frame after this release repeats
++				 * the record the chip holds *now* (which can be a
++				 * sample newer than the last one we reported), so
++				 * remember this frame's record, not the last touch.
++				 */
++				goodix_release_jiffies = jiffies;
++				memcpy(goodix_last_rec, data + 1,
++				       GOODIX_CONTACT_SIZE);
++			}
+ 			return touch_num;
+ 		}
+ 
+@@ -303,7 +333,30 @@
+ 	/*
+ 	 * The Goodix panel will send spurious interrupts after a
+ 	 * 'finger up' event, which will always cause a timeout.
++	 *
++	 * GOLE 2 Pro fallback (see goodix_last_rec above): a status-less frame
++	 * with a non-zero contact size is one finger down — unless it is the
++	 * stale repeat of the record we already reported before the release.
+ 	 */
++	if (ts->contact_size == GOODIX_CONTACT_SIZE) {
++		const u8 *rec = data + 1;
++		int size = get_unaligned_le16(&rec[5]);
++
++		if (!size) {
++			goodix_after_release = true;
++			goodix_release_jiffies = jiffies;
++			memcpy(goodix_last_rec, rec, GOODIX_CONTACT_SIZE);
++			return 0;
++		}
++		if (goodix_after_release &&
++		    time_before(jiffies, goodix_release_jiffies +
++				msecs_to_jiffies(GOODIX_STALE_WINDOW_MS)) &&
++		    !memcmp(rec, goodix_last_rec, GOODIX_STALE_CMP_LEN))
++			return -ENOMSG;
++		memcpy(goodix_last_rec, rec, GOODIX_CONTACT_SIZE);
++		goodix_after_release = false;
++		return 1;
++	}
+ 	return -ENOMSG;
+ }
+ 
+@@ -1237,6 +1290,10 @@
+ 	if (error)
+ 		return error;
+ 
++	dev_info(&ts->client->dev,
++		"irq_pin_access=%d trigger=%d max_touch=%d contact_size=%d x_max=%d y_max=%d irq=%d\n",
++		ts->irq_pin_access_method, ts->int_trigger_type, ts->max_touch_num,
++		ts->contact_size, ts->prop.max_x, ts->prop.max_y, ts->client->irq);
+ 	ts->irq_flags = goodix_irq_flags[ts->int_trigger_type] | IRQF_ONESHOT;
+ 	error = goodix_request_irq(ts);
+ 	if (error) {

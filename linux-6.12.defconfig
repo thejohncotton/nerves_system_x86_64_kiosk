@@ -220,3 +220,18 @@ CONFIG_BT_HIDP=m
 CONFIG_BT_HCIBTUSB=m
 CONFIG_BT_HCIBTUSB_RTL=y
 CONFIG_BT_HCIBTUSB_AUTOSUSPEND=y
+
+# ============================================================================
+# Higole GOLE 2 Pro (Intel Celeron N5095 / Jasper Lake, 5.5" 720x1280 DSI panel).
+# Probed on-device 2026-10-15 (vhsynth_nerves/GOLE2_PLAN.md): the F9B image already
+# drives everything on this box — i915 DSI, Goodix GDIX1001 touch (native goodix
+# driver on LPSS i2c, no GPIO IRQ needed), eMMC (sdhci-pci), RTL8168 (r8169), the
+# same RTL8821CE WiFi/BT, HDA audio, ACPI battery. The black panel was a userland
+# issue (Weston + Mesa CCS on a rotated Gen11 plane), fixed in the app.
+# ============================================================================
+
+# --- Jasper Lake GPIO community (ACPI INT34C8) currently has no driver. Nothing on
+#     the GOLE needs it today, but it's the ADL-N-pinctrl equivalent for this SoC: any
+#     future GpioInt consumer (a different touch controller batch, a lid/hall sensor)
+#     would defer forever without it, exactly as GDIX1002 did on the F9B.
+CONFIG_PINCTRL_JASPERLAKE=y

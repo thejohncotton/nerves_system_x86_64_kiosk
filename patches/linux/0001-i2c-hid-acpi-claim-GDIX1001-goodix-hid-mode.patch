@@ -1,0 +1,53 @@
+From: VHSynth kiosk system
+Subject: [PATCH] i2c-hid-acpi: claim GDIX1001 (Goodix GT911 in HID-over-I2C mode); goodix: stop matching it
+
+The Higole GOLE 2 Pro (Celeron N5095) enumerates its GT911 touch controller as
+ACPI GDIX1001 (both _HID and _CID) with the HID-over-I2C _DSM (descriptor
+address 1). The native goodix driver matched it first, read the chip ID, and
+then dropped every touch report in its silent 'buffer not ready' path, so the
+panel had interrupts but no input events. Hand the device to i2c-hid-acpi,
+which is what Windows uses on this box. GDIX1002 (Higole F9B) is untouched.
+
+--- a/drivers/input/touchscreen/goodix.c
++++ b/drivers/input/touchscreen/goodix.c
+@@ -1510,14 +1510,23 @@
+ static DEFINE_SIMPLE_DEV_PM_OPS(goodix_pm_ops, goodix_suspend, goodix_resume);
+ 
+ static const struct i2c_device_id goodix_ts_id[] = {
+-	{ "GDIX1001:00" },
++	/* Was "GDIX1001:00" — the i2c core matches this against the ACPI client
++	 * name, which would re-bind GDIX1001 here despite the ACPI table below. */
++	{ "goodix_ts" },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(i2c, goodix_ts_id);
+ 
+ #ifdef CONFIG_ACPI
+ static const struct acpi_device_id goodix_acpi_match[] = {
+-	{ "GDIX1001", 0 },
++	/*
++	 * GDIX1001 is deliberately absent: the Higole GOLE 2 Pro (Jasper Lake)
++	 * enumerates its GT911 as GDIX1001 but runs it in HID-over-I2C mode (the
++	 * ACPI node implements the HID I2C _DSM, descriptor address 1). Bound here,
++	 * the native protocol reads the chip ID fine but every touch interrupt
++	 * ends in the silent "buffer not ready" path and no events are reported.
++	 * i2c-hid-acpi claims it instead (see its match table).
++	 */
+ 	{ "GDIX1002", 0 },
+ 	{ "GDX9110", 0 },
+ 	{ }
+--- a/drivers/hid/i2c-hid/i2c-hid-acpi.c
++++ b/drivers/hid/i2c-hid/i2c-hid-acpi.c
+@@ -111,6 +111,12 @@
+ static const struct acpi_device_id i2c_hid_acpi_match[] = {
+ 	{ "ACPI0C50" },
+ 	{ "PNP0C50" },
++	/*
++	 * Goodix GT911 in HID-over-I2C mode on the Higole GOLE 2 Pro: _HID/_CID
++	 * are both GDIX1001 (no PNP0C50 _CID) but the node implements the HID I2C
++	 * _DSM. The native goodix driver no longer matches it in this kernel.
++	 */
++	{ "GDIX1001" },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(acpi, i2c_hid_acpi_match);

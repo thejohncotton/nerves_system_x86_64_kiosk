@@ -110,6 +110,9 @@ defmodule NervesSystemX8664Kiosk.MixProject do
     [
       "fwup_include",
       "rootfs_overlay",
+      # Buildroot package patches (patches/<pkg>/*.patch). Must be in the checksum or a
+      # new patch never triggers a rebuild and the cached artifact silently ships without it.
+      "patches",
       "CHANGELOG.md",
       "fwup-ops.conf",
       "fwup.conf",

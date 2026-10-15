@@ -1,7 +1,9 @@
-Subject: [PATCH] goodix: diagnostics for the GOLE 2 Pro GT911 (silent report drops)
+Subject: [PATCH] goodix: GOLE 2 Pro GT911 — report from the contact record when the status byte is empty
 
-Temporary bring-up instrumentation: log why a touch IRQ produced no events
-(buffer-ready bit never set / too many contacts) and the probe-time config.
+This GT911 firmware (1062, ACPI GDIX1001) never sets the buffer-ready bit or
+a contact count in the 0x814E status byte, but the contact record behind it is
+live on every interrupt. Fall back to it (non-zero size = one finger down) and
+keep a rate-limited dump of the first two records to learn release/multi-touch.
 
 --- a/drivers/input/touchscreen/goodix.c
 +++ b/drivers/input/touchscreen/goodix.c
@@ -19,18 +21,39 @@ Temporary bring-up instrumentation: log why a touch IRQ produced no events
  
  			if (touch_num > 1) {
  				addr += header_contact_keycode_size;
-@@ -304,6 +308,10 @@
+@@ -304,6 +308,31 @@
  	 * The Goodix panel will send spurious interrupts after a
  	 * 'finger up' event, which will always cause a timeout.
  	 */
-+	dev_err_ratelimited(&ts->client->dev,
-+		"goodix-dbg: no ready bit after %dms: %02x %02x %02x %02x %02x %02x %02x %02x\n",
-+		GOODIX_BUFFER_STATUS_TIMEOUT, data[0], data[1], data[2], data[3],
-+		data[4], data[5], data[6], data[7]);
++	/*
++	 * Higole GOLE 2 Pro (GT911 fw 1062, ACPI GDIX1001): the status byte at
++	 * 0x814E never carries the buffer-ready bit or a contact count, yet the
++	 * contact record behind it is live — track id, x, y and size update on
++	 * every interrupt. Fall back to the first record: a non-zero size means
++	 * one finger down, zero means finger up. (Multi-touch: unknown, see dump.)
++	 */
++	if (ts->contact_size == GOODIX_CONTACT_SIZE) {
++		const u8 *rec = data + 1;
++		int size = get_unaligned_le16(&rec[5]);
++
++		/* second record, for the dump only (same read the >1 path does) */
++		if (goodix_i2c_read(ts->client, addr + header_contact_keycode_size,
++				    data + header_contact_keycode_size, ts->contact_size))
++			memset(data + header_contact_keycode_size, 0xee, ts->contact_size);
++		dev_err_ratelimited(&ts->client->dev,
++			"goodix-dbg: status %02x rec0 id=%u x=%u y=%u size=%d rec1 %02x %02x %02x %02x %02x %02x %02x %02x key %02x\n",
++			data[0], rec[0], get_unaligned_le16(&rec[1]),
++			get_unaligned_le16(&rec[3]), size,
++			data[9], data[10], data[11], data[12], data[13], data[14],
++			data[15], data[16], data[17]);
++		if (size)
++			return 1;
++		return 0;
++	}
  	return -ENOMSG;
  }
  
-@@ -1237,6 +1245,10 @@
+@@ -1237,6 +1266,10 @@
  	if (error)
  		return error;
  

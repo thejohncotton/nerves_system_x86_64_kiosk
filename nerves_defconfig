@@ -45,8 +45,8 @@ BR2_TARGET_GRUB2=y
 # legacy BIOS/QEMU *and* UEFI-only hardware (F9B Pro N95 is UEFI-only, no CSM).
 BR2_TARGET_GRUB2_I386_PC=y
 BR2_TARGET_GRUB2_X86_64_EFI=y
-BR2_TARGET_GRUB2_BUILTIN_MODULES_PC="boot linux ext2 squash4 fat part_msdos normal biosdisk loadenv echo true test sleep regexp"
-BR2_TARGET_GRUB2_BUILTIN_MODULES_EFI="boot linux ext2 squash4 fat part_msdos normal loadenv echo true test sleep regexp search search_fs_file configfile efi_gop all_video"
+BR2_TARGET_GRUB2_BUILTIN_MODULES_PC="boot linux ext2 squash4 fat part_msdos part_gpt normal biosdisk loadenv echo true test sleep regexp"
+BR2_TARGET_GRUB2_BUILTIN_MODULES_EFI="boot linux ext2 squash4 fat part_msdos part_gpt normal loadenv echo true test sleep regexp search search_fs_file configfile efi_gop all_video"
 BR2_TARGET_GRUB2_INSTALL_TOOLS=y
 BR2_PACKAGE_HOST_DOSFSTOOLS=y
 BR2_NERVES_SYSTEM_NAME="nerves_system_x86_64_kiosk"

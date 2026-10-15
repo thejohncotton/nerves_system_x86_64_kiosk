@@ -1,0 +1,43 @@
+Subject: [PATCH] goodix: diagnostics for the GOLE 2 Pro GT911 (silent report drops)
+
+Temporary bring-up instrumentation: log why a touch IRQ produced no events
+(buffer-ready bit never set / too many contacts) and the probe-time config.
+
+--- a/drivers/input/touchscreen/goodix.c
++++ b/drivers/input/touchscreen/goodix.c
+@@ -275,8 +275,12 @@
+ 
+ 		if (data[0] & GOODIX_BUFFER_STATUS_READY) {
+ 			touch_num = data[0] & 0x0f;
+-			if (touch_num > ts->max_touch_num)
++			if (touch_num > ts->max_touch_num) {
++				dev_err_ratelimited(&ts->client->dev,
++					"goodix-dbg: touch_num %d > max %d (status 0x%02x)\n",
++					touch_num, ts->max_touch_num, data[0]);
+ 				return -EPROTO;
++			}
+ 
+ 			if (touch_num > 1) {
+ 				addr += header_contact_keycode_size;
+@@ -304,6 +308,10 @@
+ 	 * The Goodix panel will send spurious interrupts after a
+ 	 * 'finger up' event, which will always cause a timeout.
+ 	 */
++	dev_err_ratelimited(&ts->client->dev,
++		"goodix-dbg: no ready bit after %dms: %02x %02x %02x %02x %02x %02x %02x %02x\n",
++		GOODIX_BUFFER_STATUS_TIMEOUT, data[0], data[1], data[2], data[3],
++		data[4], data[5], data[6], data[7]);
+ 	return -ENOMSG;
+ }
+ 
+@@ -1237,6 +1245,10 @@
+ 	if (error)
+ 		return error;
+ 
++	dev_info(&ts->client->dev,
++		"goodix-dbg: irq_pin_access=%d trigger=%d max_touch=%d contact_size=%d x_max=%d y_max=%d irq=%d\n",
++		ts->irq_pin_access_method, ts->int_trigger_type, ts->max_touch_num,
++		ts->contact_size, ts->prop.max_x, ts->prop.max_y, ts->client->irq);
+ 	ts->irq_flags = goodix_irq_flags[ts->int_trigger_type] | IRQF_ONESHOT;
+ 	error = goodix_request_irq(ts);
+ 	if (error) {
